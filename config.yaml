@@ -1,0 +1,75 @@
+# Configuration for Texture Synthesis Models
+
+data:
+  data_dir: "./textures"
+  image_size: 256
+  patch_size: 64
+  num_images: 40
+  train_split: 0.9
+
+augmentation:
+  random_crop: true
+  random_flip: true
+  color_jitter: true
+  rotation: true
+  elastic_warp: false
+  jitter_brightness: 0.2
+  jitter_contrast: 0.2
+  jitter_saturation: 0.2
+  max_rotation: 15
+
+training:
+  batch_size: 8
+  num_epochs: 200
+  learning_rate_g: 0.0002
+  learning_rate_d: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+  progressive_resizing: true
+  start_size: 64
+  final_size: 256
+  resize_epochs: [50, 100, 150]
+
+losses:
+  adversarial_weight: 1.0
+  style_weight: 10.0
+  fft_weight: 1.0
+  perceptual_weight: 1.0
+  use_lsgan: true
+  use_hinge: false
+
+model:
+  # Hierarchical GAN
+  hierarchical:
+    global_channels: 64
+    local_channels: 128
+    latent_dim: 128
+    use_patchgan: true
+    patchgan_patch_size: 70
+  
+  # Hybrid CNN-Transformer
+  hybrid:
+    base_channels: 64
+    transformer_dim: 256
+    num_heads: 8
+    num_layers: 4
+    latent_dim: 128
+  
+  # Diffusion
+  diffusion:
+    timesteps: 1000
+    beta_start: 0.0001
+    beta_end: 0.02
+    unet_channels: 64
+    unet_depth: 3
+
+evaluation:
+  num_samples: 50
+  compute_sifid: true
+  compute_lpips: true
+  compute_seam_continuity: true
+
+output:
+  checkpoint_dir: "./checkpoints"
+  sample_dir: "./samples"
+  log_dir: "./logs"
