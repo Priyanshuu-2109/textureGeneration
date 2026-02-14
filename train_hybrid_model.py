@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
+from utils.tensorboard_safe import SummaryWriter
 import yaml
 import os
 from tqdm import tqdm

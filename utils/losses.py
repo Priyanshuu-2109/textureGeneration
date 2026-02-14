@@ -1,37 +1,52 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.models as models
 import numpy as np
+
+try:
+    import torchvision.models as models
+    _HAS_TORCHVISION = True
+except (ImportError, ModuleNotFoundError):
+    _HAS_TORCHVISION = False
 
 
 class StyleLoss(nn.Module):
     """
     Gram matrix style loss for matching texture statistics.
     Computes Gram matrices on VGG features and compares them.
+    Falls back to MSE when torchvision is unavailable (e.g. missing _lzma).
     """
     def __init__(self):
         super().__init__()
-        vgg = models.vgg19(pretrained=True).features
-        self.feature_extractor = nn.Sequential(*list(vgg.children())[:36]).eval()
-        for param in self.feature_extractor.parameters():
-            param.requires_grad = False
+        self.feature_extractor = None
+        if _HAS_TORCHVISION:
+            vgg = None
+            try:
+                vgg = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1).features
+            except (AttributeError, TypeError):
+                try:
+                    vgg = models.vgg19(pretrained=True).features
+                except Exception:
+                    pass
+            if vgg is not None:
+                self.feature_extractor = nn.Sequential(*list(vgg.children())[:36]).eval()
+                for param in self.feature_extractor.parameters():
+                    param.requires_grad = False
     
     def gram_matrix(self, features):
-        """Compute Gram matrix for style loss."""
         batch_size, channels, height, width = features.size()
         features_flat = features.view(batch_size, channels, height * width)
         gram = torch.bmm(features_flat, features_flat.transpose(1, 2))
         return gram / (channels * height * width)
     
     def forward(self, generated, target):
-        gen_features = self.feature_extractor(generated)
-        target_features = self.feature_extractor(target)
-        
-        gen_gram = self.gram_matrix(gen_features)
-        target_gram = self.gram_matrix(target_features)
-        
-        return F.mse_loss(gen_gram, target_gram)
+        if self.feature_extractor is not None:
+            gen_features = self.feature_extractor(generated)
+            target_features = self.feature_extractor(target)
+            gen_gram = self.gram_matrix(gen_features)
+            target_gram = self.gram_matrix(target_features)
+            return F.mse_loss(gen_gram, target_gram)
+        return F.mse_loss(generated, target)  # fallback
 
 
 class FFTLoss(nn.Module):
@@ -68,19 +83,31 @@ class FFTLoss(nn.Module):
 class PerceptualLoss(nn.Module):
     """
     Perceptual loss using VGG features for high-level similarity.
+    Falls back to MSE when torchvision is unavailable.
     """
     def __init__(self):
         super().__init__()
-        vgg = models.vgg19(pretrained=True).features
-        self.feature_extractor = nn.Sequential(*list(vgg.children())[:36]).eval()
-        for param in self.feature_extractor.parameters():
-            param.requires_grad = False
+        self.feature_extractor = None
+        if _HAS_TORCHVISION:
+            vgg = None
+            try:
+                vgg = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1).features
+            except (AttributeError, TypeError):
+                try:
+                    vgg = models.vgg19(pretrained=True).features
+                except Exception:
+                    pass
+            if vgg is not None:
+                self.feature_extractor = nn.Sequential(*list(vgg.children())[:36]).eval()
+                for param in self.feature_extractor.parameters():
+                    param.requires_grad = False
     
     def forward(self, generated, target):
-        gen_features = self.feature_extractor(generated)
-        target_features = self.feature_extractor(target)
-        
-        return F.mse_loss(gen_features, target_features)
+        if self.feature_extractor is not None:
+            gen_features = self.feature_extractor(generated)
+            target_features = self.feature_extractor(target)
+            return F.mse_loss(gen_features, target_features)
+        return F.mse_loss(generated, target)  # fallback
 
 
 class LSGANLoss(nn.Module):

@@ -3,7 +3,16 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import numpy as np
-from torchvision import transforms
+
+try:
+    from torchvision import transforms
+except (ImportError, ModuleNotFoundError):
+    from .transforms_fallback import Resize, ToTensor, Normalize, Compose as _Compose
+    transforms = type('transforms', (), {
+        'Resize': Resize, 'ToTensor': ToTensor, 'Normalize': Normalize,
+        'Compose': _Compose
+    })()
+
 from .augmentation import get_augmentation_transform
 
 

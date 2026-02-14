@@ -1,5 +1,18 @@
 import torch
-import torchvision.transforms as transforms
+try:
+    import torchvision.transforms as transforms
+except (ImportError, ModuleNotFoundError):
+    from .transforms_fallback import (
+        RandomHorizontalFlip, RandomVerticalFlip, ColorJitter,
+        RandomRotation, Compose
+    )
+    transforms = type('transforms', (), {
+        'RandomHorizontalFlip': RandomHorizontalFlip,
+        'RandomVerticalFlip': RandomVerticalFlip,
+        'ColorJitter': ColorJitter,
+        'RandomRotation': RandomRotation,
+        'Compose': Compose,
+    })()
 import numpy as np
 from PIL import Image
 import cv2
